@@ -4,19 +4,29 @@
 
 package frc.robot.subsystems;
 
+import edu.wpi.first.wpilibj.BuiltInAccelerometer;
+
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.Spark;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.external.RomiGyro;
 
 public class RomiDrivetrain extends SubsystemBase {
   private static final double kCountsPerRevolution = 1440.0;
-  private static final double kWheelDiameterInch = 2.75591; // 70 mm
+  private static final double kWheelDiameterMM = 70.0; // 70 mm
 
   // The Romi has the left and right motors set to
   // PWM channels 0 and 1 respectively
   private final Spark m_leftMotor = new Spark(0);
   private final Spark m_rightMotor = new Spark(1);
+
+  // Set up the RomiGyro
+  private final RomiGyro m_gyro = new RomiGyro();
+  // Set up the BuiltInAccelerometer
+  private final BuiltInAccelerometer m_accelerometer = new BuiltInAccelerometer();
 
   // The Romi has onboard encoders that are hardcoded
   // to use DIO pins 4/5 and 6/7 for the left and right
@@ -26,12 +36,16 @@ public class RomiDrivetrain extends SubsystemBase {
   // Set up the differential drive controller
   private final DifferentialDrive m_diffDrive = new DifferentialDrive(m_leftMotor, m_rightMotor);
 
+  private double startingAngle;
+  private Timer timer = new Timer();
   /** Creates a new RomiDrivetrain. */
   public RomiDrivetrain() {
     // Use inches as unit for encoder distances
-    m_leftEncoder.setDistancePerPulse((Math.PI * kWheelDiameterInch) / kCountsPerRevolution);
-    m_rightEncoder.setDistancePerPulse((Math.PI * kWheelDiameterInch) / kCountsPerRevolution);
+    m_leftEncoder.setDistancePerPulse((Math.PI * kWheelDiameterMM) / kCountsPerRevolution);
+    m_rightEncoder.setDistancePerPulse((Math.PI * kWheelDiameterMM) / kCountsPerRevolution);
     resetEncoders();
+    timer.start();
+    startingAngle = m_gyro.getAngleZ();
   }
 
   public void arcadeDrive(double xaxisSpeed, double zaxisRotate) {
@@ -39,21 +53,29 @@ public class RomiDrivetrain extends SubsystemBase {
   }
 
   public void resetEncoders() {
+    m_gyro.reset();
     m_leftEncoder.reset();
     m_rightEncoder.reset();
   }
 
-  public double getLeftDistanceInch() {
+  public double getLeftDistance() {
     return m_leftEncoder.getDistance();
   }
 
-  public double getRightDistanceInch() {
+  public double getRightDistance() {
     return m_rightEncoder.getDistance();
+  }
+  
+  public double getHeading() {
+    return m_gyro.getAngleZ();
   }
 
   @Override
   public void periodic() {
-    // This method will be called once per scheduler run
+    SmartDashboard.putNumber("Angle", m_gyro.getAngleZ());
+    SmartDashboard.putNumber("LeftDistance", getLeftDistance());
+    SmartDashboard.putNumber("RightDistance", getRightDistance());
+    SmartDashboard.putNumber("TurnRate", (m_gyro.getAngleZ() - startingAngle) / timer.get() );
   }
 
   @Override
