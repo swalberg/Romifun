@@ -10,76 +10,101 @@ import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+import edu.wpi.first.wpilibj.geometry.Pose2d;
+import edu.wpi.first.wpilibj.kinematics.DifferentialDriveOdometry;
+import edu.wpi.first.wpilibj.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.external.RomiGyro;
 
 public class RomiDrivetrain extends SubsystemBase {
   private static final double kCountsPerRevolution = 1440.0;
-  private static final double kWheelDiameterMM = 70.0; // 70 mm
+  private static final double kWheelDiameterMM = 70.0/1000; // 70 mm
 
   // The Romi has the left and right motors set to
   // PWM channels 0 and 1 respectively
-  private final Spark m_leftMotor = new Spark(0);
-  private final Spark m_rightMotor = new Spark(1);
+  private final Spark leftMotor = new Spark(0);
+  private final Spark rightMotor = new Spark(1);
 
   // Set up the RomiGyro
-  private final RomiGyro m_gyro = new RomiGyro();
+  private final RomiGyro gyro = new RomiGyro();
   // Set up the BuiltInAccelerometer
-  private final BuiltInAccelerometer m_accelerometer = new BuiltInAccelerometer();
+  private final BuiltInAccelerometer accelerometer = new BuiltInAccelerometer();
+  private final DifferentialDriveOdometry odometry;
 
   // The Romi has onboard encoders that are hardcoded
   // to use DIO pins 4/5 and 6/7 for the left and right
-  private final Encoder m_leftEncoder = new Encoder(4, 5);
-  private final Encoder m_rightEncoder = new Encoder(6, 7);
+  private final Encoder leftEncoder = new Encoder(4, 5);
+  private final Encoder rightEncoder = new Encoder(6, 7);
 
   // Set up the differential drive controller
-  private final DifferentialDrive m_diffDrive = new DifferentialDrive(m_leftMotor, m_rightMotor);
+  private final DifferentialDrive diffDrive = new DifferentialDrive(leftMotor, rightMotor);
 
   private double startingAngle;
   private Timer timer = new Timer();
   /** Creates a new RomiDrivetrain. */
   public RomiDrivetrain() {
     // Use inches as unit for encoder distances
-    m_leftEncoder.setDistancePerPulse((Math.PI * kWheelDiameterMM) / kCountsPerRevolution);
-    m_rightEncoder.setDistancePerPulse((Math.PI * kWheelDiameterMM) / kCountsPerRevolution);
+    leftEncoder.setDistancePerPulse((Math.PI * kWheelDiameterMM) / kCountsPerRevolution);
+    rightEncoder.setDistancePerPulse((Math.PI * kWheelDiameterMM) / kCountsPerRevolution);
     resetEncoders();
     timer.start();
-    startingAngle = m_gyro.getAngleZ();
+    startingAngle = gyro.getAngleZ();
+    odometry = new DifferentialDriveOdometry(gyro.getRotation2d());
+
   }
 
   public void arcadeDrive(double xaxisSpeed, double zaxisRotate) {
-    m_diffDrive.arcadeDrive(xaxisSpeed, zaxisRotate);
+    diffDrive.arcadeDrive(xaxisSpeed, zaxisRotate);
   }
 
   public void resetEncoders() {
-    m_gyro.reset();
-    m_leftEncoder.reset();
-    m_rightEncoder.reset();
+    gyro.reset();
+    leftEncoder.reset();
+    rightEncoder.reset();
   }
 
   public double getLeftDistance() {
-    return m_leftEncoder.getDistance();
+    return leftEncoder.getDistance();
   }
 
   public double getRightDistance() {
-    return m_rightEncoder.getDistance();
+    return rightEncoder.getDistance();
   }
   
   public double getHeading() {
-    return m_gyro.getAngleZ();
+    return gyro.getAngleZ();
   }
 
   @Override
   public void periodic() {
-    SmartDashboard.putNumber("Angle", m_gyro.getAngleZ());
-    SmartDashboard.putNumber("LeftDistance", getLeftDistance());
-    SmartDashboard.putNumber("RightDistance", getRightDistance());
-    SmartDashboard.putNumber("TurnRate", (m_gyro.getAngleZ() - startingAngle) / timer.get() );
+    odometry.update(gyro.getRotation2d(), getLeftDistance(), getRightDistance());
+    SmartDashboard.putNumber("Angle", gyro.getAngleZ());
+    SmartDashboard.putNumber("TurnRate", (gyro.getAngleZ() - startingAngle) / timer.get() );
+    SmartDashboard.putString("Pose", getPose().toString());
   }
 
   @Override
   public void simulationPeriodic() {
     // This method will be called once per scheduler run during simulation
+  }
+
+  public Pose2d getPose() {
+    return odometry.getPoseMeters();
+  }
+  
+  public DifferentialDriveWheelSpeeds getWheelSpeeds() {
+    return new DifferentialDriveWheelSpeeds(leftEncoder.getRate(), rightEncoder.getRate());
+  }
+
+  public void resetOdometry(Pose2d pose) {
+    resetEncoders();
+    odometry.resetPosition(pose, gyro.getRotation2d());
+  }
+
+  public void tankDriveVolts(double leftVolts, double rightVolts) {
+    leftMotor.setVoltage(leftVolts);
+    rightMotor.setVoltage(-rightVolts);
+    diffDrive.feed();
   }
 }

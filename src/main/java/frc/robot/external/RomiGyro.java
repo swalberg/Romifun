@@ -7,6 +7,7 @@ package frc.robot.external;
 import edu.wpi.first.hal.SimDevice;
 import edu.wpi.first.hal.SimDevice.Direction;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.geometry.Rotation2d;
 import edu.wpi.first.hal.SimDouble;
 
 public class RomiGyro {
@@ -29,7 +30,7 @@ public class RomiGyro {
   Timer timer = new Timer();
   public static double angleDriftPerSecX = 3.581;// 3.581;
   public static double angleDriftPerSecY = -0.149;// -0.149
-  public static double angleDriftPerSecZ = 0.1451;// 0.555;
+  public static double angleDriftPerSecZ = -0.28; //0.1451;// 0.555;
 
   /** Create a new RomiGyro. */
   public RomiGyro() {
@@ -129,6 +130,9 @@ public class RomiGyro {
     return 0.0;
   }
 
+  public Rotation2d getRotation2d() {
+    return new Rotation2d(Math.toRadians(getAngleZ()));
+  }
   /** Reset the gyro angles to 0. */
   public void reset() {
     timer.reset();
