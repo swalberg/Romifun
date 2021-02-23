@@ -30,7 +30,7 @@ public class RomiGyro {
   Timer timer = new Timer();
   public static double angleDriftPerSecX = 3.581;// 3.581;
   public static double angleDriftPerSecY = -0.149;// -0.149
-  public static double angleDriftPerSecZ = -0.28; //0.1451;// 0.555;
+  public static double angleDriftPerSecZ = 0.10;
 
   /** Create a new RomiGyro. */
   public RomiGyro() {

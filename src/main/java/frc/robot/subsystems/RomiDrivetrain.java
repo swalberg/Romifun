@@ -5,7 +5,8 @@
 package frc.robot.subsystems;
 
 import edu.wpi.first.wpilibj.BuiltInAccelerometer;
-
+import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.DigitalOutput;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.Timer;
@@ -19,7 +20,9 @@ import frc.robot.external.RomiGyro;
 
 public class RomiDrivetrain extends SubsystemBase {
   private static final double kCountsPerRevolution = 1440.0;
-  private static final double kWheelDiameterMM = 70.0/1000; // 70 mm
+  private static final double kWheelDiameterM = 70.0/1000.0; // 70 mm
+  private DigitalOutput red = new DigitalOutput(2);
+  private DigitalOutput green = new DigitalOutput(1);
 
   // The Romi has the left and right motors set to
   // PWM channels 0 and 1 respectively
@@ -40,21 +43,27 @@ public class RomiDrivetrain extends SubsystemBase {
   // Set up the differential drive controller
   private final DifferentialDrive diffDrive = new DifferentialDrive(leftMotor, rightMotor);
 
-  private double startingAngle;
   private Timer timer = new Timer();
   /** Creates a new RomiDrivetrain. */
   public RomiDrivetrain() {
-    // Use inches as unit for encoder distances
-    leftEncoder.setDistancePerPulse((Math.PI * kWheelDiameterMM) / kCountsPerRevolution);
-    rightEncoder.setDistancePerPulse((Math.PI * kWheelDiameterMM) / kCountsPerRevolution);
+    red.set(false);
+    green.set(false);
+    leftEncoder.setDistancePerPulse((Math.PI * kWheelDiameterM) / kCountsPerRevolution);
+    rightEncoder.setDistancePerPulse((Math.PI * kWheelDiameterM) / kCountsPerRevolution);
     resetEncoders();
     timer.start();
-    startingAngle = gyro.getAngleZ();
     odometry = new DifferentialDriveOdometry(gyro.getRotation2d());
 
   }
 
   public void arcadeDrive(double xaxisSpeed, double zaxisRotate) {
+    if (Math.abs(xaxisSpeed) < 0.02) {
+      red.set(true);
+      green.set(false);
+    } else {
+      red.set(false);
+      green.set(true);
+    }
     diffDrive.arcadeDrive(xaxisSpeed, zaxisRotate);
   }
 
@@ -80,7 +89,7 @@ public class RomiDrivetrain extends SubsystemBase {
   public void periodic() {
     odometry.update(gyro.getRotation2d(), getLeftDistance(), getRightDistance());
     SmartDashboard.putNumber("Angle", gyro.getAngleZ());
-    SmartDashboard.putNumber("TurnRate", (gyro.getAngleZ() - startingAngle) / timer.get() );
+    SmartDashboard.putNumber("TurnRate", gyro.getAngleZ() / timer.get() );
     SmartDashboard.putString("Pose", getPose().toString());
   }
 

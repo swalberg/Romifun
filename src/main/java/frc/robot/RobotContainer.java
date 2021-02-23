@@ -4,13 +4,28 @@
 
 package frc.robot;
 
+import java.util.List;
+
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.controller.PIDController;
+import edu.wpi.first.wpilibj.controller.RamseteController;
+import edu.wpi.first.wpilibj.controller.SimpleMotorFeedforward;
+import edu.wpi.first.wpilibj.geometry.Pose2d;
+import edu.wpi.first.wpilibj.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.geometry.Translation2d;
+import edu.wpi.first.wpilibj.trajectory.Trajectory;
+import edu.wpi.first.wpilibj.trajectory.TrajectoryConfig;
+import edu.wpi.first.wpilibj.trajectory.TrajectoryGenerator;
+import edu.wpi.first.wpilibj.trajectory.constraint.DifferentialDriveVoltageConstraint;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.RamseteCommand;
+import edu.wpi.first.wpilibj2.command.RunCommand;
+import frc.robot.Constants.AutoConstants;
+import frc.robot.Constants.DriveConstants;
 import frc.robot.commands.TurnToHeading;
 import frc.robot.subsystems.RomiDrivetrain;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.RunCommand;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -46,8 +61,56 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    // An ExampleCommand will run in autonomous
     m_romiDrivetrain.resetEncoders();
-    return turnToBack.andThen(new TurnToHeading(m_romiDrivetrain, 180)).andThen(new RunCommand(() -> m_romiDrivetrain.arcadeDrive(0, 0)));
+    //return turnToBack.andThen(new TurnToHeading(m_romiDrivetrain, 180)).andThen(new RunCommand(() -> m_romiDrivetrain.arcadeDrive(0, 0)));
+      // Create a voltage constraint to ensure we don't accelerate too fast
+    var autoVoltageConstraint =
+        new DifferentialDriveVoltageConstraint(
+            new SimpleMotorFeedforward(DriveConstants.ksVolts,
+                                       DriveConstants.kvVoltSecondsPerMeter,
+                                       DriveConstants.kaVoltSecondsSquaredPerMeter),
+            DriveConstants.kDriveKinematics,
+            6);
+
+    // Create config for trajectory
+    TrajectoryConfig config =
+        new TrajectoryConfig(AutoConstants.kMaxSpeedMetersPerSecond,
+                             AutoConstants.kMaxAccelerationMetersPerSecondSquared)
+            // Add kinematics to ensure max speed is actually obeyed
+            .setKinematics(DriveConstants.kDriveKinematics)
+            // Apply the voltage constraint
+            .addConstraint(autoVoltageConstraint);
+
+    // An example trajectory to follow.  All units in meters.
+    Trajectory exampleTrajectory = TrajectoryGenerator.generateTrajectory(
+        // Start at the origin facing the +X direction
+            new Pose2d(0, 0, new Rotation2d(0)),
+        List.of(
+            new Translation2d(0.5, 0)
+        ),
+        new Pose2d(1.0, 0, new Rotation2d(0)),
+        config);
+
+    RamseteCommand ramseteCommand = new RamseteCommand(
+        exampleTrajectory,
+        m_romiDrivetrain::getPose,
+        new RamseteController(AutoConstants.kRamseteB, AutoConstants.kRamseteZeta),
+        new SimpleMotorFeedforward(DriveConstants.ksVolts,
+                                   DriveConstants.kvVoltSecondsPerMeter,
+                                   DriveConstants.kaVoltSecondsSquaredPerMeter),
+        DriveConstants.kDriveKinematics,
+        m_romiDrivetrain::getWheelSpeeds,
+        new PIDController(DriveConstants.kPDriveVel, 0, 0),
+        new PIDController(DriveConstants.kPDriveVel, 0, 0),
+        // RamseteCommand passes volts to the callback
+        m_romiDrivetrain::tankDriveVolts,
+        m_romiDrivetrain
+    );
+
+    // Reset odometry to the starting pose of the trajectory.
+    m_romiDrivetrain.resetOdometry(exampleTrajectory.getInitialPose());
+
+    // Run path following command, then stop at the end.
+    return ramseteCommand.andThen(() -> m_romiDrivetrain.tankDriveVolts(0, 0));
   }
 }
