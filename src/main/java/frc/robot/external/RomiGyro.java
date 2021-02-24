@@ -131,7 +131,7 @@ public class RomiGyro {
   }
 
   public Rotation2d getRotation2d() {
-    return new Rotation2d(Math.toRadians(getAngleZ()));
+    return new Rotation2d(Math.toRadians(-getAngleZ()));
   }
   /** Reset the gyro angles to 0. */
   public void reset() {
