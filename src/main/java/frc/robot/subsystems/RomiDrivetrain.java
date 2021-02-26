@@ -88,8 +88,10 @@ public class RomiDrivetrain extends SubsystemBase {
   @Override
   public void periodic() {
     odometry.update(gyro.getRotation2d(), getLeftDistance(), getRightDistance());
+    SmartDashboard.putNumber("x-rate", gyro.getRateX());
+    SmartDashboard.putNumber("y-rate", gyro.getRateY());
+    SmartDashboard.putNumber("z-rate", gyro.getRateZ());
     SmartDashboard.putNumber("Angle", gyro.getAngleZ());
-    SmartDashboard.putNumber("TurnRate", gyro.getAngleZ() / timer.get() );
     SmartDashboard.putString("Pose", getPose().toString());
   }
 

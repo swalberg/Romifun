@@ -1,16 +1,22 @@
-// Copyright (c) FIRST and other WPILib contributors.
-// Open Source Software; you can modify and/or share it under the terms of
-// the WPILib BSD license file in the root directory of this project.
+/*----------------------------------------------------------------------------*/
+/* Copyright (c) 2018-2019 FIRST. All Rights Reserved.                        */
+/* Open Source Software - may be modified and shared by FRC teams. The code   */
+/* must be accompanied by the FIRST BSD license file in the root directory of */
+/* the project.                                                               */
+/*----------------------------------------------------------------------------*/
 
 package frc.robot.external;
 
 import edu.wpi.first.hal.SimDevice;
-import edu.wpi.first.hal.SimDevice.Direction;
-import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.geometry.Rotation2d;
 import edu.wpi.first.hal.SimDouble;
+import edu.wpi.first.hal.SimDevice.Direction;
+import edu.wpi.first.wpilibj.geometry.Rotation2d;
 
+/**
+ * Add your docs here.
+ */
 public class RomiGyro {
+  private SimDevice m_simRomiGyro;
   private SimDouble m_simRateX;
   private SimDouble m_simRateY;
   private SimDouble m_simRateZ;
@@ -18,42 +24,26 @@ public class RomiGyro {
   private SimDouble m_simAngleY;
   private SimDouble m_simAngleZ;
 
-  private double m_angleXOffset;
-  private double m_angleYOffset;
-  private double m_angleZOffset;
+  private double m_angleXOffset = 0;
+  private double m_angleYOffset = 0;
+  private double m_angleZOffset = 0;
 
-  // Seems like this is no longer needed.
-  // As of the 2021.2.1 release the drift is more acceptable without manually
-  // correcting/
-  // Previously I was getting about .5 angle drift per seconds which was affecting
-  // turning commands
-  Timer timer = new Timer();
-  public static double angleDriftPerSecX = 3.581;// 3.581;
-  public static double angleDriftPerSecY = -0.149;// -0.149
-  public static double angleDriftPerSecZ = 0.10;
-
-  /** Create a new RomiGyro. */
   public RomiGyro() {
-    timer.start();
+    // Create the SimDevice to match the registered name on the Romi
+    m_simRomiGyro = SimDevice.create("Gyro:RomiGyro");
+    if (m_simRomiGyro != null) {
+      // Create the init field. No need to save a reference since it's one shot
+      m_simRomiGyro.createBoolean("init", Direction.kOutput, true);
+      m_simRateX = m_simRomiGyro.createDouble("rate_x", Direction.kInput, 0.0);
+      m_simRateY = m_simRomiGyro.createDouble("rate_y", Direction.kInput, 0.0);
+      m_simRateZ = m_simRomiGyro.createDouble("rate_z", Direction.kInput, 0.0);
 
-    SimDevice gyroSimDevice = SimDevice.create("Gyro:RomiGyro");
-    if (gyroSimDevice != null) {
-      gyroSimDevice.createBoolean("init", Direction.kOutput, true);
-      m_simRateX = gyroSimDevice.createDouble("rate_x", Direction.kInput, 0.0);
-      m_simRateY = gyroSimDevice.createDouble("rate_y", Direction.kInput, 0.0);
-      m_simRateZ = gyroSimDevice.createDouble("rate_z", Direction.kInput, 0.0);
-
-      m_simAngleX = gyroSimDevice.createDouble("angle_x", Direction.kInput, 0.0);
-      m_simAngleY = gyroSimDevice.createDouble("angle_y", Direction.kInput, 0.0);
-      m_simAngleZ = gyroSimDevice.createDouble("angle_z", Direction.kInput, 0.0);
+      m_simAngleX = m_simRomiGyro.createDouble("angle_x", Direction.kInput, 0.0);
+      m_simAngleY = m_simRomiGyro.createDouble("angle_y", Direction.kInput, 0.0);
+      m_simAngleZ = m_simRomiGyro.createDouble("angle_z", Direction.kInput, 0.0);
     }
   }
 
-  /**
-   * Get the rate of turn in degrees-per-second around the X-axis.
-   *
-   * @return rate of turn in degrees-per-second
-   */
   public double getRateX() {
     if (m_simRateX != null) {
       return m_simRateX.get();
@@ -62,11 +52,6 @@ public class RomiGyro {
     return 0.0;
   }
 
-  /**
-   * Get the rate of turn in degrees-per-second around the Y-axis.
-   *
-   * @return rate of turn in degrees-per-second
-   */
   public double getRateY() {
     if (m_simRateY != null) {
       return m_simRateY.get();
@@ -75,11 +60,6 @@ public class RomiGyro {
     return 0.0;
   }
 
-  /**
-   * Get the rate of turn in degrees-per-second around the Z-axis.
-   *
-   * @return rate of turn in degrees-per-second
-   */
   public double getRateZ() {
     if (m_simRateZ != null) {
       return m_simRateZ.get();
@@ -88,43 +68,25 @@ public class RomiGyro {
     return 0.0;
   }
 
-  /**
-   * Get the currently reported angle around the X-axis.
-   *
-   * @return current angle around X-axis in degrees
-   */
   public double getAngleX() {
-    double driftXOffset = timer.get() * angleDriftPerSecX;
     if (m_simAngleX != null) {
-      return m_simAngleX.get() - m_angleXOffset - driftXOffset;
+      return m_simAngleX.get() - m_angleXOffset;
     }
 
     return 0.0;
   }
 
-  /**
-   * Get the currently reported angle around the X-axis.
-   *
-   * @return current angle around Y-axis in degrees
-   */
   public double getAngleY() {
-    double driftYOffset = timer.get() * angleDriftPerSecY;
     if (m_simAngleY != null) {
-      return m_simAngleY.get() - m_angleYOffset - driftYOffset;
+      return m_simAngleY.get() - m_angleYOffset;
     }
 
     return 0.0;
   }
 
-  /**
-   * Get the currently reported angle around the Z-axis.
-   *
-   * @return current angle around Z-axis in degrees
-   */
   public double getAngleZ() {
-    double driftZOffset = timer.get() * angleDriftPerSecZ;
     if (m_simAngleZ != null) {
-      return m_simAngleZ.get() - m_angleZOffset - driftZOffset;
+      return m_simAngleZ.get() - m_angleZOffset;
     }
 
     return 0.0;
@@ -133,9 +95,8 @@ public class RomiGyro {
   public Rotation2d getRotation2d() {
     return new Rotation2d(Math.toRadians(-getAngleZ()));
   }
-  /** Reset the gyro angles to 0. */
+
   public void reset() {
-    timer.reset();
     if (m_simAngleX != null) {
       m_angleXOffset = m_simAngleX.get();
       m_angleYOffset = m_simAngleY.get();
