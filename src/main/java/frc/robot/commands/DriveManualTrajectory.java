@@ -58,24 +58,16 @@ public class DriveManualTrajectory {
         ),
         new Pose2d(0, 0, new Rotation2d(Math.PI)), config);
 
-    RamseteController disabledRamsete = new RamseteController() {
-      @Override
-      public ChassisSpeeds calculate(Pose2d currentPose, Pose2d poseRef, double linearVelocityRefMeters,
-          double angularVelocityRefRadiansPerSecond) {
-        return new ChassisSpeeds(linearVelocityRefMeters, 0.0, angularVelocityRefRadiansPerSecond);
-      }
-    };
     var table = NetworkTableInstance.getDefault().getTable("troubleshooting");
     var leftReference = table.getEntry("left_reference");
     var leftMeasurement = table.getEntry("left_measurement");
     var rightReference = table.getEntry("right_reference");
     var rightMeasurement = table.getEntry("right_measurement");
-    var leftController = new PIDController(DriveConstants.kPDriveVel, 0, 0);
-    var rightController = new PIDController(DriveConstants.kPDriveVel, 0, 0);
+    var leftController = new PIDController(DriveConstants.kPDriveVel, DriveConstants.kIDriveVel, DriveConstants.kDDriveVel);
+    var rightController = new PIDController(DriveConstants.kPDriveVel, DriveConstants.kIDriveVel, DriveConstants.kDDriveVel);
 
     RamseteCommand ramseteCommand = new RamseteCommand(exampleTrajectory, m_romiDrivetrain::getPose,
         new RamseteController(AutoConstants.kRamseteB, AutoConstants.kRamseteZeta),
-        // disabledRamsete,
         new SimpleMotorFeedforward(DriveConstants.ksVolts, DriveConstants.kvVoltSecondsPerMeter,
             DriveConstants.kaVoltSecondsSquaredPerMeter),
         DriveConstants.kDriveKinematics, m_romiDrivetrain::getWheelSpeeds, leftController, rightController,
