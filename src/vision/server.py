@@ -42,41 +42,25 @@ def main():
          print(input_stream.getError())
          continue
 
-      # Convert to HSV and threshold image
-      hsv_img = cv2.cvtColor(input_img, cv2.COLOR_BGR2HSV)
-      binary_img = cv2.inRange(hsv_img, (1, 1, 1), (85, 255, 255))
-
-      _, contour_list, _ = cv2.findContours(binary_img, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
-
-      x_list = []
-      y_list = []
-
-      for contour in contour_list:
-
-         # Ignore small contours that could be because of noise/bad thresholding
-         if cv2.contourArea(contour) < 15:
-            continue
-
-         cv2.drawContours(output_img, contour, -1, color = (255, 255, 255), thickness = -1)
-
-         rect = cv2.minAreaRect(contour)
-         center, size, angle = rect
-         center = [int(dim) for dim in center] # Convert to int so we can draw
-
-         # Draw rectangle and circle
-         #cv2.drawContours(output_img, rect, -1, color = (0, 0, 255), thickness = 2)
-         box = cv2.boxPoints(rect) # cv2.boxPoints(rect) for OpenCV 3.x
-         box = np.int0(box)
+      # Grayscale
+      gray = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+      circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1.2, 100)
 
 
-         cv2.drawContours(image=output_img, contours=[ box], contourIdx=0, color=(0, 0, 255), thickness=2)
-         #cv2.circle(img=output_img, center = center, radius = 3, color = (0, 0, 255), thickness = -1)
+      # ensure at least some circles were found
+      if circles is not None:
+         print("Found a circle")
+         # convert the (x, y) coordinates and radius of the circles to integers
+         circles = np.round(circles[0, :]).astype("int")
+         # loop over the (x, y) coordinates and radius of the circles
+         for (x, y, r) in circles:
+            # draw the circle in the output image, then draw a rectangle
+            # corresponding to the center of the circle
+            cv2.circle(output_img, (x, y), r, (0, 255, 0), 4)
+            cv2.rectangle(output_img, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
 
-         x_list.append((center[0] - width / 2) / (width / 2))
-         x_list.append((center[1] - width / 2) / (width / 2))
-
-      vision_nt.putNumberArray('target_x', x_list)
-      vision_nt.putNumberArray('target_y', y_list)
+      #vision_nt.putNumberArray('target_x', x_list)
+      #vision_nt.putNumberArray('target_y', y_list)
 
       processing_time = time.time() - start_time
       fps = 1 / processing_time
